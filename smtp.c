@@ -763,6 +763,37 @@ ExitProcessing:
 }
 
 /*
+** process 2 alternative attachments as inline part
+*/
+int process_alternativ (Attachment *a, Attachment *b, const char *boundary)
+{
+    a->content_disposition = "inline";
+    b->content_disposition = "inline";
+
+    char
+        alternative[17];
+
+    memset(alternative, 0, sizeof(alternative));
+    mutilsGenerateMIMEBoundary(alternative,sizeof(alternative));
+
+    (void) snprintf(buf, bufsz,"--%s\r\n",boundary);
+    write_to_socket(buf);
+
+    // open alternative boundary
+    (void) snprintf(buf, bufsz, "Content-Type: multipart/alternative; boundary=%s\r\n\r\n", alternative);
+    write_to_socket(buf);
+
+    // add parts of alternative boundary
+    send_attachment (a, alternative);
+    send_attachment (b, alternative);
+
+    // close alternative boundary
+    (void) snprintf(buf, bufsz, "--%s--\r\n", alternative);
+    write_to_socket(buf);
+    return(0);
+}
+
+/*
 ** write MIME headers, encode attachment if needed
 ** and write to socket
 ** returns 0 on success -1 on failure
@@ -886,6 +917,13 @@ int process_attachments(const char *boundary)
         a=(Attachment *) al->data;
         if (a == NULL)
             continue;
+
+        if (strncmp(a->content_disposition, "alternativ", 10) == 0)
+        {
+          al=al->next;
+          process_alternativ (a, (Attachment *) al->data, boundary);
+          continue;
+        }
 
         rc = send_attachment(a, boundary);
         if (rc == -1)

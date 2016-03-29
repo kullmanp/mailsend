@@ -322,6 +322,10 @@ int add_attachment_to_list(char *file_path_mime)
             {
                 a->content_disposition=xStrdup("inline");
             }
+            else if (*content_disposition == 'x')
+            {
+                a->content_disposition=xStrdup("alternative");
+            }
             else
             {
                 a->content_disposition=xStrdup("attachment");
